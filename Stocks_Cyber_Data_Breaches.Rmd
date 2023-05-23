@@ -1,0 +1,89 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+df <- read_csv("Balloon Race_ Data Breaches.csv")
+colnames(df) = str_replace_all(colnames(df)," ","_")
+clean_df = df %>% mutate(precent_the_change_price = as.numeric(precent_the_change_price)) %>%
+        mutate(precent_the_change_nsdq = as.numeric(precent_the_change_nsdq)) %>%  
+        mutate(net_change = as.numeric(net_change)) %>%
+        mutate(year = as.numeric(year)) %>%
+        filter(precent_the_change_price != 0) 
+
+all_df = slice(df, 2:276)  
+
+all_df1 = all_df %>% mutate(precent_the_change_price = as.numeric(precent_the_change_price)) %>%
+        mutate(precent_the_change_nsdq = as.numeric(precent_the_change_nsdq)) %>%  
+        mutate(net_change = as.numeric(net_change)) %>%
+        mutate(year = as.numeric(year))
+        
+all_df1 = all_df1 %>% mutate(records_lost = strtoi(str_replace_all(records_lost,",",""))) %>%
+        mutate(data_sensitivity = as.numeric(data_sensitivity))  
+  
+  
+clean_df =  clean_df %>% mutate(records_lost = strtoi(str_replace_all(records_lost,",",""))) %>%
+        mutate(data_sensitivity = as.numeric(data_sensitivity))
+
+clean_df1 <- clean_df[!is.na(clean_df$net_change),]
+
+clean_df %>% group_by(year) %>% count()
+
+clean_df %>% group_by(year) %>% summarise(records_lost_total = sum(records_lost))
+all_df1 %>% group_by(year) %>% summarise(records_lost_total = sum(records_lost))
+
+all_df1 %>% group_by(year) %>% summarise(data_sensitivity_mean = mean(data_sensitivity))
+
+clean_df %>% group_by(data_sensitivity) %>% count()
+
+all_df1 %>% group_by(sector) %>% count()
+
+clean_df %>% group_by(year) %>% summarise(records_lost_total = sum(records_lost))
+
+clean_df %>% group_by(data_sensitivity) %>% count()
+all_df1 %>% group_by(data_sensitivity) %>% count()
+
+clean_df %>% group_by(abs(net_change)>1) %>% count()
+clean_df %>% group_by((precent_the_change_price>0) & (precent_the_change_nsdq>0)) %>% count()
+
+reatil_df = clean_df %>% filter(sector == 'retail') 
+
+avg_retail = mean(reatil_df$net_change)
+```
+
+```{r}
+clean_df %>% ggplot(aes(year, records_lost, color = sector)) + geom_point()
+
+clean_df %>% ggplot(aes(year, records_lost, color = method)) + geom_point(aes(size = records_lost))
+
+all_df1 %>% ggplot(aes(year, data_sensitivity)) + geom_point()
+```
+
+```{r}
+clean_df %>% ggplot(aes(precent_the_change_nsdq, precent_the_change_price, color = sector)) + geom_hline(yintercept=0) + geom_vline(xintercept = 0) + geom_point(aes(size = records_lost))
+
+ clean_df %>% ggplot() + 
+  xlim(2011, 2024) +
+  aes(year, net_change, color = sector) + 
+  geom_hline(yintercept = 0) + 
+  geom_vline(xintercept = 0) + 
+  geom_point(aes(size = records_lost))
+```
+
+```{r}
+clean_df %>% ggplot(aes(precent_the_change_nsdq, precent_the_change_price, color = method)) + geom_hline(yintercept=0) + geom_vline(xintercept = 0) + geom_point(aes(size = records_lost))
+```
+
+```{r}
+t.test(clean_df1 %>% pull(precent_the_change_price), clean_df1 %>% pull(precent_the_change_nsdq), alternative = "less", paired = TRUE)
+
+
+lm_model <- lm(formula = net_change ~ records_lost + as.factor(year) + as.factor(method)+ as.factor(sector) + 
+    data_sensitivity, data = clean_df1)
+summary(lm_model)
+```
